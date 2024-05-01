@@ -1,242 +1,141 @@
-import React, { useState, useRef } from 'react';
-import { Box, FormControl, TextField, Grid } from '@mui/material';
-import style from './RegistrationForm.module.css';
-import { useDispatch, useSelector } from 'react-redux';
-import {
-  validateEmail,
-  validateName,
-  validatePassword,
-} from '../../redux/validation/registrationSlice';
-import ValidationPopup from '../ValidationPopup/ValidationPopup';
-import {
-  selectFormIsValid,
-  selectIsEmailValid,
-  selectIsPasswordValid,
-  selectIsNameValid,
-} from '../../redux/validation/registrationSelectors';
-import { register } from 'redux/auth/authOperations';
+import React, { useState } from 'react';
+import { useDispatch } from 'react-redux';
+import { useFormik } from 'formik';
 import { useNavigate } from 'react-router-dom';
-import CustomButton from 'components/CustomButton/CustomButton';
-import { postCalculator } from 'redux/user/userOperations';
-import { useUser } from 'hooks/useUser';
+import * as Yup from 'yup';
 
-const RegistrationForm = () => {
-  const emailRef = useRef(null);
-  const passwordRef = useRef(null);
-  const isEmailValid = useSelector(selectIsEmailValid);
-  const isPasswordValid = useSelector(selectIsPasswordValid);
-  const isNameValid = useSelector(selectIsNameValid);
-  const isFormValid = useSelector(selectFormIsValid);
-  const { calculator } = useUser();
-  const validationReqs = useSelector(
-    state => state.registration.validationReqs
-  );
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const [validationPopups, setValidationPopups] = useState({
-    name: false,
-    email: false,
-    password: false,
-  });
-  const [focusedField, setFocusedField] = useState(null);
-  const toggleValidationPopup = (fieldName, visible) => {
-    setValidationPopups({ ...validationPopups, [fieldName]: visible });
-  };
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-  });
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      email: '',
-      password: '',
-    });
-    dispatch(validateName({ fieldValue: '' }));
-    dispatch(validateEmail({ fieldValue: '' }));
-    dispatch(validatePassword({ fieldValue: '' }));
-  };
+import { authOperations } from '../../redux/app/auth';
 
-  const handleChange = e => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
+import { PasswordEyeButton } from 'components/Buttons';
+import {
+  Thumb,
+  Title,
+  Form,
+  FormList,
+  FormItem,
+  Label,
+  Input,
+  Message,
+  ButtonsContainer,
+  Button,
+  StyledNavLink,
+} from './RegistrationForm.styled';
 
-    switch (name) {
-      case 'name':
-        dispatch(validateName({ fieldValue: value }));
-        break;
-      case 'email':
-        dispatch(validateEmail({ fieldValue: value.toLowerCase() }));
-        break;
-      case 'password':
-        dispatch(validatePassword({ fieldValue: value }));
-        break;
-      default:
-        break;
-    }
-    setFocusedField(name);
-    toggleValidationPopup(name, true);
-  };
-
-  const calculatorInfo = {
-    height: calculator.height,
-    age: calculator.age,
-    bloodType: calculator.bloodType,
-    currentWeight: calculator.currentWeight,
-    desiredWeight: calculator.desiredWeight,
-    heightFeet: calculator.heightFeet,
-    heightInch: calculator.heightInch,
-    currentWeightLbs: calculator.currentWeightLbs,
-    desiredWeightLbs: calculator.desiredWeightLbs,
-    dailyRate: calculator.calculatorDailyRate,
-    unitOfMeasure: calculator.unitOfMeasure,
-    date: calculator.date,
-    startDate: calculator.startDate,
-    originalWeight: calculator.originalWeight,
-  };
-
-  const handleSubmit = async e => {
-    e.preventDefault();
-    try {
-      const { name, email, password } = formData;
-      const senddate = { name, email: email.toLowerCase(), password };
-      const registerResultAction = await dispatch(register(senddate));
-      if (register.fulfilled.match(registerResultAction)) {
-        const postCalculatorResultAction = await dispatch(
-          postCalculator(calculatorInfo)
-        );
-        if (postCalculator.rejected.match(postCalculatorResultAction)) {
-          navigate('/calculator');
-        } else {
-          navigate('/diary');
-        }
-        resetForm();
-      }
-    } catch (error) {
-      throw new Error('Error registering user: ' + error.message);
-    }
-  };
-
-  return (
-    <Box sx={{ width: '100%' }} className={style.form_container}>
-      <h2 className={style.form_title}>REGISTER</h2>
-      <Grid className={style.form_grid}>
-        <FormControl variant="standard">
-          <form onSubmit={handleSubmit} noValidate className={style.form}>
-            <TextField
-              className={style.name_input}
-              autoComplete="name"
-              InputLabelProps={
-                focusedField === 'name' && !isNameValid
-                  ? { style: { color: 'red' } }
-                  : { style: { color: '#9B9FAA' } }
-              }
-              inputProps={{
-                onKeyPress: event => {
-                  const { key } = event;
-                  if (key === 'Enter') {
-                    emailRef.current.focus();
-                  }
-                },
-              }}
-              variant="standard"
-              label={'Name *'}
-              type="text"
-              name="name"
-              fullWidth
-              margin="normal"
-              value={formData.name}
-              onChange={handleChange}
-              onFocus={() => setFocusedField('name')}
-              onBlur={() => setFocusedField(null)}
-              error={focusedField === 'name' && !isNameValid}
-            />
-            {focusedField === 'name' && (
-              <ValidationPopup
-                validationData={validationReqs[focusedField]}
-                visible={focusedField}
-              />
-            )}
-            <TextField
-              className={style.email_input}
-              autoComplete="email"
-              InputLabelProps={
-                focusedField === 'email' && !isEmailValid
-                  ? { style: { color: 'red' } }
-                  : { style: { color: '#9B9FAA' } }
-              }
-              inputRef={emailRef}
-              inputProps={{
-                onKeyPress: event => {
-                  const { key } = event;
-                  if (key === 'Enter') {
-                    passwordRef.current.focus();
-                  }
-                },
-              }}
-              variant="standard"
-              label={'Email *'}
-              type="email"
-              name="email"
-              fullWidth
-              margin="normal"
-              value={formData.email}
-              onChange={handleChange}
-              onFocus={() => setFocusedField('email')}
-              onBlur={() => setFocusedField(null)}
-              error={focusedField === 'email' && !isEmailValid}
-            />
-            {focusedField === 'email' && (
-              <ValidationPopup
-                validationData={validationReqs[focusedField]}
-                visible={focusedField}
-              />
-            )}
-            <TextField
-              className={style.password_input}
-              autoComplete="current-password"
-              InputLabelProps={
-                focusedField === 'password' && !isPasswordValid
-                  ? { style: { color: 'red' } }
-                  : { style: { color: '#9B9FAA' } }
-              }
-              inputRef={passwordRef}
-              variant="standard"
-              label={'Password *'}
-              type="password"
-              name="password"
-              fullWidth
-              margin="normal"
-              value={formData.password}
-              onChange={handleChange}
-              onFocus={() => setFocusedField('password')}
-              onBlur={() => setFocusedField(null)}
-              error={focusedField === 'password' && !isPasswordValid}
-            />
-            {focusedField === 'password' && (
-              <ValidationPopup
-                validationData={validationReqs[focusedField]}
-                visible={focusedField}
-              />
-            )}
-            <Box className={style.button_container}>
-              <CustomButton
-                type="submit"
-                color="orange"
-                disabled={!isFormValid}
-              >
-                Register
-              </CustomButton>
-            </Box>
-          </form>
-        </FormControl>
-      </Grid>
-    </Box>
-  );
+const initialValues = {
+  name: '',
+  email: '',
+  password: '',
 };
 
-export default RegistrationForm;
+export const RegistrationForm = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  const [show, setShow] = useState(false);
+  const handleClick = () => setShow(!show);
+
+  const formik = useFormik({
+    initialValues,
+
+    validationSchema: Yup.object({
+      name: Yup.string()
+        .min(3, 'Minimum 3 characters')
+        .max(254, 'Maximum 254 characters')
+        .matches(/[A-z]/, 'Please select the English keyboard layout')
+        .required('Required'),
+
+      email: Yup.string()
+        .email('Invalid email address')
+        .max(254, 'Maximum 254 characters')
+        .matches(
+          /([a-z0-9_.-]{3,})@([A-z0-9_.-]{1,}).([A-z]{2,8})/,
+          'The email must contain a minimum of 3 characters'
+        )
+        .required('Required'),
+
+      password: Yup.string()
+        .min(8, 'Minimum 8 characters')
+        .max(100, 'Maximum 100 characters')
+        .matches(
+          /(?=.*[0-9])(?=.*[a-z])[0-9a-zA-Z]{8,}/,
+          'The password must consist of Latin letters and numbers without special characters'
+        )
+        .required('Required'),
+    }),
+
+    onSubmit: values => {
+      const { name, email, password } = values;
+      dispatch(authOperations.actionRegister({ name, email, password })).then(
+        ({ payload }) => {
+          if (payload?.code === 201) {
+            navigate('/login', { replace: true });
+          }
+        }
+      );
+
+      formik.resetForm();
+    },
+  });
+
+  return (
+    <Thumb>
+      <Title>Registration</Title>
+
+      <Form onSubmit={formik.handleSubmit}>
+        <FormList>
+          <FormItem>
+            <Label htmlFor="name">Name *</Label>
+
+            <Input
+              id="name"
+              name="name"
+              type="text"
+              onChange={formik.handleChange}
+              value={formik.values.name}
+            />
+            {formik.touched.name && formik.errors.name ? (
+              <Message>{formik.errors.name}</Message>
+            ) : null}
+          </FormItem>
+          <FormItem>
+            <Label htmlFor="email">Email address *</Label>
+
+            <Input
+              id="email"
+              name="email"
+              type="text"
+              onChange={formik.handleChange}
+              value={formik.values.email}
+            />
+            {formik.touched.email && formik.errors.email ? (
+              <Message>{formik.errors.email}</Message>
+            ) : null}
+          </FormItem>
+
+          <FormItem>
+            <Label htmlFor="password">Password *</Label>
+
+            <Input
+              id="password"
+              name="password"
+              type={show ? 'text' : 'password'}
+              onChange={formik.handleChange}
+              value={formik.values.password}
+            />
+            <PasswordEyeButton handleClick={handleClick} show={show} />
+
+            {formik.touched.password && formik.errors.password ? (
+              <Message>{formik.errors.password}</Message>
+            ) : null}
+          </FormItem>
+        </FormList>
+
+        <ButtonsContainer>
+          <Button type="submit">Registration</Button>
+
+          <StyledNavLink to="/login">Log in</StyledNavLink>
+        </ButtonsContainer>
+      </Form>
+    </Thumb>
+  );
+};

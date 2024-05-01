@@ -1,45 +1,88 @@
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Button, CloseBtn } from 'components/Buttons';
+import IconBack from 'assets/images/arrow-mobile.png';
+
 import {
-  Box,
-  Backdrop,
-  Fade,
-  Modal as MaterialModal,
-  useMediaQuery,
-} from '@mui/material';
+  Overlay,
+  ModalDiv,
+  ModalTtl,
+  KcalCount,
+  Text,
+  ProdList,
+  CloseModalBtn,
+  CloseBtnWrapper,
+  ContentWrap,
+  BackButton,
+  BtnThumb,
+} from './Modal.styled';
 
-import DailyRateModal from './DailyRateModal';
-import DiaryModal from './DiaryModal';
+export const Modal = ({
+  closeModalHandle,
+  userData: { userDailyCalorieIntake, userNotRecommendedProducts },
+}) => {
+  const navigate = useNavigate();
 
-const Modal = ({ handleModalClose, modalState }) => {
-  const isMobile = useMediaQuery('(max-width: 480px)');
+  const escKeyHandle = event => {
+    if (event.keyCode === 27) {
+      closeModalHandle();
+    }
+  };
+
+  useEffect(() => {
+    window.addEventListener('keydown', escKeyHandle);
+    return () => {
+      window.removeEventListener('keydown', escKeyHandle);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const onClickOvrlHandle = event => {
+    if (event.target.id === 'modal-overlay') {
+      closeModalHandle();
+    }
+  };
+  const onBtnClickHandle = () => {
+    closeModalHandle();
+    navigate('/register', { replace: true });
+  };
+
+  const closeModal = () => {
+    closeModalHandle();
+  };
 
   return (
-    <MaterialModal
-      style={{ top: isMobile && 83 }}
-      open={modalState.open}
-      onClose={handleModalClose}
-      closeAfterTransition
-      slots={{ backdrop: Backdrop }}
-      slotProps={{
-        backdrop: {
-          timeout: 500,
-          sx: { top: isMobile && 83, backgroundColor: '#2121211f' },
-        },
-      }}
-      disableScrollLock={isMobile ? true : false}
-    >
-      <Fade in={modalState.open}>
-        <Box>
-          {modalState.source === 'calculator' ? (
-            <DailyRateModal
-              handleModalClose={handleModalClose}
-              modalState={modalState}
+    <Overlay id="modal-overlay" onClick={onClickOvrlHandle}>
+      <ModalDiv>
+        <CloseBtnWrapper>
+          <BackButton onClick={() => closeModal()}>
+            <img src={IconBack} alt="IconBack" width={12} height={7} />
+          </BackButton>
+          <CloseModalBtn>
+            <CloseBtn onHandleClick={closeModal} />
+          </CloseModalBtn>
+        </CloseBtnWrapper>
+        <ContentWrap>
+          <ModalTtl>Your recommended daily calorie intake is</ModalTtl>
+          <KcalCount>
+            {userDailyCalorieIntake}
+            <span> kcal</span>
+          </KcalCount>
+          <Text>Foods you shouldn't eat.</Text>
+          <ProdList>
+            {userNotRecommendedProducts?.map((product, i) => (
+              <li key={i}>{product}</li>
+            ))}
+          </ProdList>
+
+          <BtnThumb>
+            <Button
+              onClickHandler={onBtnClickHandle}
+              btnText="Start losing weight."
             />
-          ) : (
-            <DiaryModal handleModalClose={handleModalClose} />
-          )}
-        </Box>
-      </Fade>
-    </MaterialModal>
+          </BtnThumb>
+        </ContentWrap>
+      </ModalDiv>
+    </Overlay>
   );
 };
-export default Modal;

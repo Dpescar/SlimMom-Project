@@ -1,172 +1,104 @@
-import React from 'react';
-import { useState, useRef } from 'react';
-import style from '../LoginForm/login.module.css';
-import { Box, FormControl, TextField, Grid } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
-import { login } from 'redux/auth/authOperations';
-import { useDispatch, useSelector } from 'react-redux';
+import { useState } from 'react';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
+import { useDispatch } from 'react-redux';
+
+import { authOperations } from 'redux/app/auth';
+
 import {
-  selectIsEmailValid,
-  selectIsPasswordValid,
-} from '../../redux/validation/registrationSelectors';
-import {
-  validateEmail,
-  validatePassword,
-} from '../../redux/validation/registrationSlice';
-import { getUserInfo } from 'redux/user/userOperations';
-import { useUser } from 'hooks/useUser';
-import CustomButton from 'components/CustomButton/CustomButton';
-import { clearCalculator } from 'redux/user/userSlice';
+  Thumb,
+  Title,
+  Form,
+  FormList,
+  FormItem,
+  Label,
+  Input,
+  Message,
+  ButtonsContainer,
+  Button,
+  StyledLink,
+} from './LoginForm.styled';
+import { PasswordEyeButton } from 'components/Buttons';
 
-const LoginForm = () => {
-  const passwordRef = useRef(null);
-  const isEmailValid = useSelector(selectIsEmailValid);
-  const isPasswordValid = useSelector(selectIsPasswordValid);
-  const dispatch = useDispatch();
-  const { calendarDate } = useUser();
-  const nav = useNavigate();
-
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
-
-  const [focusedField, setFocusedField] = useState('');
-
-  const handleChange = e => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-
-    switch (name) {
-      case 'email':
-        dispatch(validateEmail({ fieldValue: value }));
-        break;
-      case 'password':
-        dispatch(validatePassword({ fieldValue: value }));
-        break;
-      default:
-        break;
-    }
-  };
-
-  async function handleLogin() {
-    try {
-      const { email, password } = formData;
-      const sendData = { email: email.toLowerCase(), password };
-      const loginResultAction = await dispatch(login(sendData));
-      if (login.fulfilled.match(loginResultAction)) {
-        const getUserInfoResultAction = await dispatch(
-          getUserInfo(calendarDate)
-        );
-        if (getUserInfo.rejected.match(getUserInfoResultAction)) {
-          dispatch(clearCalculator());
-          nav('/calculator');
-        } else {
-          nav('/diary');
-        }
-      }
-    } catch (err) {
-      throw new Error('Error logging in: ' + err.message);
-    }
-  }
-
-  function handleSubmit(e) {
-    e.preventDefault();
-    handleLogin();
-  }
-
-  return (
-    <Box className={style.form_container}>
-      <h2 className={style.form_title}>LOG IN</h2>
-      <Grid className={style.form_grid}>
-        {}
-
-        <FormControl variant="standard">
-          <form onSubmit={handleSubmit} className={style.form}>
-            {' '}
-            {}
-            <TextField
-              autoComplete="email"
-              className={style.email_input}
-              InputLabelProps={
-                focusedField === 'email' && !isEmailValid
-                  ? { style: { color: 'red' } }
-                  : { style: { color: '#9B9FAA' } }
-              }
-              inputProps={{
-                onKeyPress: event => {
-                  const { key } = event;
-                  if (key === 'Enter') {
-                    passwordRef.current.focus();
-                  }
-                },
-              }}
-              variant="standard"
-              label="Email"
-              type="email"
-              name="email"
-              fullWidth
-              margin="normal"
-              required
-              error={focusedField === 'email' && !isEmailValid}
-              helperText={
-                !formData.email ? (
-                  'Required'
-                ) : isEmailValid && formData.email.length > 3 ? (
-                  <span className={style.error_message_valid}>Checks out!</span>
-                ) : (
-                  <span className={style.error_message}>Not quite!</span>
-                )
-              }
-              value={formData.email}
-              onChange={handleChange}
-              onFocus={() => setFocusedField('email')}
-            />
-            <TextField
-              autoComplete="current-password"
-              className={style.password_input}
-              InputLabelProps={
-                focusedField === 'password' && !isPasswordValid
-                  ? { style: { color: 'red' } }
-                  : { style: { color: '#9B9FAA' } }
-              }
-              inputRef={passwordRef}
-              variant="standard"
-              label="Password"
-              type="password"
-              name="password"
-              fullWidth
-              margin="normal"
-              required
-              error={focusedField === 'password' && !isPasswordValid}
-              helperText={
-                !formData.password ? (
-                  'Required'
-                ) : isPasswordValid ? (
-                  <span className={style.error_message_valid}>Checks out!</span>
-                ) : (
-                  <span className={style.error_message}>Not quite!</span>
-                )
-              }
-              value={formData.password}
-              onChange={handleChange}
-              onFocus={() => setFocusedField('password')}
-            />
-            <Box className={style.button_container}>
-              <CustomButton
-                color="orange"
-                type="submit"
-                disabled={!isEmailValid || !isPasswordValid}
-                className={style.login_button}
-              >
-                Log In
-              </CustomButton>
-            </Box>
-          </form>
-        </FormControl>
-      </Grid>
-    </Box>
-  );
+const initialValues = {
+  name: '',
+  email: '',
+  password: '',
 };
 
-export default LoginForm;
+export const LoginForm = () => {
+  const dispatch = useDispatch();
+  const [show, setShow] = useState(false);
+
+  const handleClick = () => setShow(!show);
+
+  const formik = useFormik({
+    initialValues,
+    validationSchema: Yup.object({
+      email: Yup.string()
+        .email('Invalid email.')
+        .min(3, 'Minimum 3 characters.')
+        .max(254, 'Maximum 254 characters.')
+        .required('Required'),
+      password: Yup.string()
+        .min(8, 'Minimum 8 characters.')
+        .max(100, 'Maximum 100 characters.')
+        .matches(
+          /[A-z0-9]/,
+          'The password must contain letters and numbers, without special characters.'
+        )
+        .required('Required'),
+    }),
+    onSubmit: values => {
+      const { email, password } = values;
+      dispatch(authOperations.actionLogin({ email, password }));
+    },
+  });
+
+  return (
+    <Thumb>
+      <Title>Log in</Title>
+
+      <Form onSubmit={formik.handleSubmit}>
+        <FormList>
+          <FormItem>
+            <Label htmlFor="email">Email *</Label>
+            <Input
+              id="email"
+              name="email"
+              type="text"
+              onChange={formik.handleChange}
+              password
+              value={formik.values.email}
+            />
+
+            {formik.touched.email && formik.errors.email ? (
+              <Message>{formik.errors.email}</Message>
+            ) : null}
+          </FormItem>
+
+          <FormItem>
+            <Label htmlFor="password">Password *</Label>
+            <Input
+              id="password"
+              name="password"
+              type={show ? 'text' : 'password'}
+              onChange={formik.handleChange}
+              value={formik.values.password}
+            />
+            <PasswordEyeButton handleClick={handleClick} show={show} />
+
+            {formik.touched.password && formik.errors.password ? (
+              <Message>{formik.errors.password}</Message>
+            ) : null}
+          </FormItem>
+        </FormList>
+
+        <ButtonsContainer>
+          <Button type="submit">Log in</Button>
+          <StyledLink to="/register">Registration</StyledLink>
+        </ButtonsContainer>
+      </Form>
+    </Thumb>
+  );
+};

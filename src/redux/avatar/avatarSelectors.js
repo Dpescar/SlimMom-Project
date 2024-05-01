@@ -1,1 +1,0 @@
-export const selectAvatarData = (state) => state.avatar.avatarData;
